@@ -6,28 +6,18 @@ A REST API service, that stores ports data, from a file upload. Also, it allows 
 
 ##### 1. Using docker
 
-In order to set the project up, it is enough to run:
+In order to run the docker container, with in memory storage, use following command:
 
 ```sh
-make run-http
+make run-container-inmem
 ```
 
-It will automatically build the docker images, and set up mongo along with rest api server.
+It will automatically build the docker images, and launch the server on port `8080`.
 
-By default, it will store the data in memory. In order to store data in database, make sure to add `mongo-db-name` and `mongo-db-uri` arguments to the entrypoint, in docker-compose file:
-
-```yaml
-    entrypoint:
-      ...
-      - "--mongo-db-uri=mongodb://root:S3cret@mongodb:27017/?maxPoolSize=20&w=majority"
-      - "--mongo-db-name=port"
-      ...
-```
-
-and run the make command again:
+In order to start application in container, along with MongoDB, use this command:
 
 ```sh
-make run-http
+make run-container-mongo
 ```
 
 ##### 2. Using manual build
