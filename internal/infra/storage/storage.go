@@ -10,7 +10,7 @@ var (
 )
 
 type Storage interface {
-	Find(ctx context.Context, filter map[string]interface{}) (interface{}, error)
+	Find(ctx context.Context, filter map[string]interface{}, result interface{}) error
 	Insert(ctx context.Context, obj interface{}) error
 	Update(ctx context.Context, id interface{}, obj interface{}) error
 }

@@ -22,12 +22,14 @@ var (
 
 func init() {
 	port = flag.Int("port", 8080, "Port on which server will listen for requests")
-	mongoDbName = flag.String("mongo-db-name", "", "The database name for MongoDB storage")
-	mongoDbUrl = flag.String("mongo-db-url", "", "The URL for MongoDB storage")
+	mongoDbName = flag.String("mongo-db-name", "ports", "The database name for MongoDB storage")
+	mongoDbUrl = flag.String("mongo-db-uri", "", "The URL for MongoDB storage")
 }
 
 func main() {
 	flag.Parse()
+
+	log.Println("init ports service:", *mongoDbUrl, *mongoDbName)
 
 	app, err := http.BuildApp(*port,
 		http.PortHandlers(createPortService()),
@@ -60,11 +62,12 @@ func main() {
 // TODO: use a DI container, like wire
 func createPortService() ports.PortService {
 	if *mongoDbUrl == "" || *mongoDbName == "" {
-		return ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage(), nil))
+		return ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage()))
 	}
+
 	portsDbStorage, err := database.NewMongoDB(context.Background(), *mongoDbUrl, *mongoDbName, "ports")
 	if err != nil {
 		panic(err)
 	}
-	return ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage(), portsDbStorage))
+	return ports.NewPortService(ports.NewPortRepositories(portsDbStorage))
 }

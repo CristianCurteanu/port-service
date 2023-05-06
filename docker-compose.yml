@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  mongodb:
+    image: mongo:5.0
+    ports:
+      - 27017:27017
+    volumes:
+      - ~/url-shortener/data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=S3cret
+
+  rest-api:
+    restart: always
+    entrypoint:
+      - "/sbin/server"
+      - "--port=8080"
+      - "--mongo-db-uri=mongodb://root:S3cret@mongodb:27017/?maxPoolSize=20&w=majority"
+      - "--mongo-db-name=port"
+    build:
+      dockerfile: Dockerfile
+      context: .
+    expose:
+      - "8080"
+    ports:
+      - "8080:8080"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - mongodb
+
+volumes:
+  cache:
+    driver: local

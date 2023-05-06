@@ -3,36 +3,44 @@ package inmemory
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 
 	"github.com/CristianCurteanu/koken-api/internal/infra/storage"
 )
 
-type inMemoryStorage struct {
+type InMemoryStorage struct {
 	store map[string]interface{}
 	mx    *sync.RWMutex
 }
 
 func NewInMemoryStorage() storage.Storage {
-	return &inMemoryStorage{
+	return &InMemoryStorage{
 		store: make(map[string]interface{}),
 		mx:    &sync.RWMutex{},
 	}
 }
 
-func (im *inMemoryStorage) Find(ctx context.Context, filter map[string]interface{}) (interface{}, error) {
+func (im *InMemoryStorage) Find(ctx context.Context, filter map[string]interface{}, result interface{}) error {
 	key, keyFound := filter["port_code"]
 	if !keyFound {
-		return nil, errors.New("no `port_code` key set to filter for in memory lookup")
+		return errors.New("no `port_code` key set to filter for in memory lookup")
 	}
 
 	im.mx.Lock()
-	defer im.mx.Unlock()
-	result, found := im.store[key.(string)]
+	res, found := im.store[key.(string)]
+	im.mx.Unlock()
+
 	if !found {
-		return nil, storage.ErrNotFound
+		return storage.ErrNotFound
 	}
-	return result, nil
+	resultValue := reflect.ValueOf(result)
+	if resultValue.Kind() != reflect.Ptr {
+		return errors.New("result should be a pointer")
+	}
+	resultValue.Elem().Set(reflect.ValueOf(res))
+
+	return nil
 }
 
 type KeyValue struct {
@@ -40,7 +48,7 @@ type KeyValue struct {
 	Value interface{}
 }
 
-func (im *inMemoryStorage) Insert(ctx context.Context, obj interface{}) error {
+func (im *InMemoryStorage) Insert(ctx context.Context, obj interface{}) error {
 	insertable, ok := obj.(KeyValue)
 	if !ok {
 		return errors.New("not a KeyValue type added")
@@ -54,7 +62,7 @@ func (im *inMemoryStorage) Insert(ctx context.Context, obj interface{}) error {
 	return nil
 }
 
-func (im *inMemoryStorage) Update(ctx context.Context, id interface{}, obj interface{}) error {
+func (im *InMemoryStorage) Update(ctx context.Context, id interface{}, obj interface{}) error {
 	key, isString := id.(string)
 	if !isString {
 		return errors.New("the key given to store is not a `string`")

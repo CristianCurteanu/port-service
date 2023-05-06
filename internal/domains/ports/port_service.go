@@ -3,6 +3,7 @@ package ports
 import (
 	"context"
 
+	"github.com/CristianCurteanu/koken-api/internal/infra/storage"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,7 +26,7 @@ func (ps *portsService) GetByPortCode(ctx context.Context, code string) (Port, e
 }
 
 func (ps *portsService) CreateOrUpdate(ctx context.Context, port Port) error {
-	if _, err := ps.repo.Find(ctx, port.PortCode); err == nil {
+	if _, err := ps.repo.Find(ctx, port.PortCode); err == storage.ErrNotFound {
 		return ps.repo.Create(ctx, port)
 	}
 	return ps.repo.Update(ctx, port)

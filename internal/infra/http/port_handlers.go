@@ -61,7 +61,7 @@ func getPortByPortCodeHandler(service ports.PortService) gin.HandlerFunc {
 			return
 		}
 
-		ctx.SecureJSON(http.StatusNotFound, portResponse(port))
+		ctx.SecureJSON(http.StatusOK, portResponse(port))
 	}
 }
 
