@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CristianCurteanu/koken-api/errors"
 	"github.com/CristianCurteanu/koken-api/internal/domains/ports"
 	"github.com/gin-gonic/gin"
 )
@@ -45,7 +44,7 @@ func getPortByPortCodeHandler(service ports.PortService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		portCode, found := ctx.Params.Get("port_code")
 		if !found || portCode == "" {
-			ctx.SecureJSON(http.StatusBadRequest, errors.ApiError{
+			ctx.SecureJSON(http.StatusBadRequest, ApiError{
 				Code:    "no_port_code",
 				Message: "No port_code provided, please check the URL, to make sure you added port_code path param",
 			})
@@ -54,7 +53,7 @@ func getPortByPortCodeHandler(service ports.PortService) gin.HandlerFunc {
 
 		port, err := service.GetByPortCode(ctx, portCode)
 		if err != nil {
-			ctx.SecureJSON(http.StatusNotFound, errors.ApiError{
+			ctx.SecureJSON(http.StatusNotFound, ApiError{
 				Code:    "not_found",
 				Message: "No port found with the specified port code",
 			})
@@ -74,7 +73,7 @@ func createPortsHandler(service ports.PortService) gin.HandlerFunc {
 		copied, err := io.Copy(buf, file)
 		if err != nil {
 			log.Printf("PORTS[CREATE][file_buf.copy], error=%q\n", err)
-			ctx.SecureJSON(http.StatusInternalServerError, errors.ApiError{
+			ctx.SecureJSON(http.StatusInternalServerError, ApiError{
 				Code:    "internal_error",
 				Message: "Please check with the administrator",
 			})
@@ -83,7 +82,7 @@ func createPortsHandler(service ports.PortService) gin.HandlerFunc {
 
 		if copied != header.Size {
 			log.Printf("PORTS[CREATE][file_buf.copy], error=%q\n", fmt.Errorf("copied `%d`, while header-size is: `%d`", copied, header.Size))
-			ctx.SecureJSON(http.StatusInternalServerError, errors.ApiError{
+			ctx.SecureJSON(http.StatusInternalServerError, ApiError{
 				Code:    "internal_error",
 				Message: "Please check with the administrator",
 			})
@@ -95,7 +94,7 @@ func createPortsHandler(service ports.PortService) gin.HandlerFunc {
 		if err != nil {
 			log.Printf("PORTS[CREATE][file_buf.unmarshal], error=%q\n", err)
 
-			ctx.SecureJSON(http.StatusBadRequest, errors.ApiError{
+			ctx.SecureJSON(http.StatusBadRequest, ApiError{
 				Code:    "bad_json_file",
 				Message: "Please check your json file, there might be syntax issues",
 			})
@@ -106,7 +105,7 @@ func createPortsHandler(service ports.PortService) gin.HandlerFunc {
 		err = service.CreateOrUpdateMany(ctx, ports)
 		if err != nil {
 			log.Printf("PORTS[CREATE][service.create_or_update_many], error=%q\n", err)
-			ctx.SecureJSON(http.StatusInternalServerError, errors.ApiError{
+			ctx.SecureJSON(http.StatusInternalServerError, ApiError{
 				Code:    "invalid_data",
 				Message: "Error while storing the data; please contact administrator to check the reason of failure",
 			})
