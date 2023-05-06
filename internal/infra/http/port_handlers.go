@@ -28,12 +28,41 @@ func PortHandlers(service ports.PortService) DomainHandler {
 				},
 				Handler: createPortsHandler(service),
 			},
+			{
+				Path:    "/ports/:port_code",
+				Method:  http.MethodGet,
+				Handler: getPortByPortCodeHandler(service),
+			},
 		},
 	}
 }
 
 func requestLogMiddleware(c *gin.Context) {
-	log.Printf("PORTS[CREATE][received]: %q", c.Request.URL.Path)
+	log.Printf("PORTS[%s][received]: %q", c.Request.Method, c.Request.URL.Path)
+}
+
+func getPortByPortCodeHandler(service ports.PortService) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		portCode, found := ctx.Params.Get("port_code")
+		if !found || portCode == "" {
+			ctx.SecureJSON(http.StatusBadRequest, errors.ApiError{
+				Code:    "no_port_code",
+				Message: "No port_code provided, please check the URL, to make sure you added port_code path param",
+			})
+			return
+		}
+
+		port, err := service.GetByPortCode(ctx, portCode)
+		if err != nil {
+			ctx.SecureJSON(http.StatusNotFound, errors.ApiError{
+				Code:    "not_found",
+				Message: "No port found with the specified port code",
+			})
+			return
+		}
+
+		ctx.SecureJSON(http.StatusNotFound, portResponse(port))
+	}
 }
 
 func createPortsHandler(service ports.PortService) gin.HandlerFunc {
@@ -125,4 +154,18 @@ func decodePortsBody(data []byte) (res []ports.Port, err error) {
 	}
 
 	return res, nil
+}
+
+type portResponse struct {
+	PortCode    string    `json:"port_code,omitempty"`
+	Name        string    `json:"name,omitempty"`
+	City        string    `json:"city,omitempty"`
+	Country     string    `json:"country,omitempty"`
+	Code        string    `json:"code,omitempty"`
+	Alias       []string  `json:"alias,omitempty"`
+	Regions     []string  `json:"regions,omitempty"`
+	Coordinates []float64 `json:"coordinates,omitempty"`
+	Province    string    `json:"province,omitempty"`
+	Timezone    string    `json:"timezone,omitempty"`
+	Unlocs      []string  `json:"unlocs,omitempty"`
 }

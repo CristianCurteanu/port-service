@@ -57,11 +57,11 @@ func main() {
 	log.Println("[server-exit]: OK")
 }
 
+// TODO: use a DI container, like wire
 func createPortService() ports.PortService {
-	if mongoDbUrl == nil || mongoDbName == nil {
-		return nil
+	if *mongoDbUrl == "" || *mongoDbName == "" {
+		return ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage(), nil))
 	}
-	// TODO: use a DI container, like wire
 	portsDbStorage, err := database.NewMongoDB(context.Background(), *mongoDbUrl, *mongoDbName, "ports")
 	if err != nil {
 		panic(err)

@@ -7,6 +7,7 @@ import (
 )
 
 type PortService interface {
+	GetByPortCode(ctx context.Context, code string) (Port, error)
 	CreateOrUpdate(ctx context.Context, port Port) error
 	CreateOrUpdateMany(ctx context.Context, ports []Port) error
 }
@@ -17,6 +18,10 @@ type portsService struct {
 
 func NewPortService(repo PortRepository) PortService {
 	return &portsService{repo}
+}
+
+func (ps *portsService) GetByPortCode(ctx context.Context, code string) (Port, error) {
+	return ps.repo.Find(ctx, code)
 }
 
 func (ps *portsService) CreateOrUpdate(ctx context.Context, port Port) error {

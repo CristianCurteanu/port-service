@@ -10,11 +10,14 @@ import (
 
 type inMemoryStorage struct {
 	store map[string]interface{}
-	mx    sync.RWMutex
+	mx    *sync.RWMutex
 }
 
 func NewInMemoryStorage() storage.Storage {
-	return &inMemoryStorage{}
+	return &inMemoryStorage{
+		store: make(map[string]interface{}),
+		mx:    &sync.RWMutex{},
+	}
 }
 
 func (im *inMemoryStorage) Find(ctx context.Context, filter map[string]interface{}) (interface{}, error) {
