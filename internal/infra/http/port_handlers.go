@@ -106,7 +106,7 @@ func createPortsHandler(service ports.PortService) gin.HandlerFunc {
 		if err != nil {
 			log.Printf("PORTS[CREATE][service.create_or_update_many], error=%q\n", err)
 			ctx.SecureJSON(http.StatusInternalServerError, ApiError{
-				Code:    "invalid_data",
+				Code:    "err_data_store",
 				Message: "Error while storing the data; please contact administrator to check the reason of failure",
 			})
 			return
