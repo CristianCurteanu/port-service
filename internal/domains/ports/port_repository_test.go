@@ -31,7 +31,7 @@ func (ms *MockStorage) Update(ctx context.Context, id interface{}, obj interface
 func TestRepositoryFind(t *testing.T) {
 	t.Run("return no error if found", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := NewPortRepositories(storageMock)
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Find", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -42,7 +42,7 @@ func TestRepositoryFind(t *testing.T) {
 
 	t.Run("return error if not found", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := NewPortRepositories(storageMock)
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Find", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("mock error"))
 
@@ -55,7 +55,7 @@ func TestRepositoryFind(t *testing.T) {
 func TestCreate(t *testing.T) {
 	t.Run("return no error if created", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := NewPortRepositories(storageMock)
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Insert", mock.Anything, mock.Anything).Return(nil)
 
@@ -66,7 +66,7 @@ func TestCreate(t *testing.T) {
 
 	t.Run("return error if not created", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := NewPortRepositories(storageMock)
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Insert", mock.Anything, mock.Anything).Return(errors.New("not created"))
 
@@ -77,10 +77,7 @@ func TestCreate(t *testing.T) {
 
 	t.Run("use in-memory key value if storage is in-memory storage", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := portsRepository{
-			storage:     storageMock,
-			storageType: storageTypeInMem,
-		}
+		repository := NewInMemoryRepository(storageMock)
 		storageMock.On("Insert", mock.Anything, mock.Anything).Return(nil)
 
 		err := repository.Create(context.Background(), Port{PortCode: "TC-0001"})
@@ -92,7 +89,7 @@ func TestCreate(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	t.Run("return no error if updated", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := NewPortRepositories(storageMock)
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -103,7 +100,7 @@ func TestUpdate(t *testing.T) {
 
 	t.Run("return no error if updated", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := NewPortRepositories(storageMock)
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("update error"))
 
@@ -114,10 +111,7 @@ func TestUpdate(t *testing.T) {
 
 	t.Run("handle port-code if storage is mongo", func(t *testing.T) {
 		storageMock := new(MockStorage)
-		repository := portsRepository{
-			storage:     storageMock,
-			storageType: storageTypeMongoDB,
-		}
+		repository := NewPortRepository(StorageTypeInMem, storageMock)
 
 		storageMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -125,4 +119,19 @@ func TestUpdate(t *testing.T) {
 		require.NoError(t, err)
 		storageMock.AssertNumberOfCalls(t, "Update", 1)
 	})
+}
+
+func TestRegisterStrategy(t *testing.T) {
+	storageMock := new(MockStorage)
+
+	key := RegisterPortRepositoryStrategy(NewMongoRepository)
+	require.Equal(t, key, RepositoryStrategy(3))
+
+	storageMock.On("Find", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	repository := NewPortRepository(key, storageMock)
+
+	_, err := repository.Find(context.Background(), "TC-0001")
+	require.NoError(t, err)
+	storageMock.AssertNumberOfCalls(t, "Find", 1)
 }
