@@ -22,7 +22,7 @@ import (
 func TestPortsFileUpload(t *testing.T) {
 	t.Run("test success upload", func(t *testing.T) {
 		router := httpApi.NewRouter(
-			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage()))),
+			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepository(ports.StorageTypeInMem, inmemory.NewInMemoryStorage()))),
 		)
 		resp := httptest.NewRecorder()
 		req, err := formFileUpload("/ports", "ports", "./fixtures/success.json")
@@ -45,7 +45,7 @@ func TestPortsFileUpload(t *testing.T) {
 
 	t.Run("fail if data is passed as an array", func(t *testing.T) {
 		router := httpApi.NewRouter(
-			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage()))),
+			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepository(ports.StorageTypeInMem, inmemory.NewInMemoryStorage()))),
 		)
 		resp := httptest.NewRecorder()
 		req, err := formFileUpload("/ports", "ports", "./fixtures/fail_as_array.json")
@@ -59,7 +59,7 @@ func TestPortsFileUpload(t *testing.T) {
 
 	t.Run("fail if data in json is not json", func(t *testing.T) {
 		router := httpApi.NewRouter(
-			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage()))),
+			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepository(ports.StorageTypeInMem, inmemory.NewInMemoryStorage()))),
 		)
 		resp := httptest.NewRecorder()
 		req, err := formFileUpload("/ports", "ports", "./fixtures/fail_as_array.json")
@@ -73,7 +73,7 @@ func TestPortsFileUpload(t *testing.T) {
 
 	t.Run("fail if struct of value is not as expected", func(t *testing.T) {
 		router := httpApi.NewRouter(
-			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage()))),
+			httpApi.PortHandlers(ports.NewPortService(ports.NewPortRepository(ports.StorageTypeInMem, inmemory.NewInMemoryStorage()))),
 		)
 		resp := httptest.NewRecorder()
 		req, err := formFileUpload("/ports", "ports", "./fixtures/fail_as_array.json")
@@ -136,6 +136,9 @@ func formFileUpload(uri string, paramName, path string) (*http.Request, error) {
 		return nil, err
 	}
 	_, err = io.Copy(part, file)
+	if err != nil {
+		return nil, err
+	}
 
 	err = writer.Close()
 	if err != nil {

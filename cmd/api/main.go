@@ -29,8 +29,6 @@ func init() {
 func main() {
 	flag.Parse()
 
-	log.Println("init ports service:", *mongoDbUrl, *mongoDbName)
-
 	app, err := http.BuildApp(*port,
 		http.PortHandlers(createPortService()),
 	)
@@ -62,12 +60,12 @@ func main() {
 // TODO: use a DI container, like wire
 func createPortService() ports.PortService {
 	if *mongoDbUrl == "" || *mongoDbName == "" {
-		return ports.NewPortService(ports.NewPortRepositories(inmemory.NewInMemoryStorage()))
+		return ports.NewPortService(ports.NewPortRepository(ports.StorageTypeInMem, inmemory.NewInMemoryStorage()))
 	}
 
 	portsDbStorage, err := database.NewMongoDB(context.Background(), *mongoDbUrl, *mongoDbName, "ports")
 	if err != nil {
 		panic(err)
 	}
-	return ports.NewPortService(ports.NewPortRepositories(portsDbStorage))
+	return ports.NewPortService(ports.NewPortRepository(ports.StorageTypeMongoDB, portsDbStorage))
 }

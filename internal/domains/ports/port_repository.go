@@ -3,9 +3,9 @@ package ports
 import (
 	"context"
 	"log"
+	"sort"
 
 	"github.com/CristianCurteanu/koken-api/internal/infra/storage"
-	"github.com/CristianCurteanu/koken-api/internal/infra/storage/database"
 	"github.com/CristianCurteanu/koken-api/internal/infra/storage/inmemory"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -16,65 +16,107 @@ type PortRepository interface {
 	Update(ctx context.Context, port Port) error
 }
 
-type portsRepository struct {
-	storage     storage.Storage
-	storageType int
+var storageStrategies map[RepositoryStrategy]func(storage.Storage) PortRepository
+
+func init() {
+	storageStrategies = make(map[RepositoryStrategy]func(storage.Storage) PortRepository)
+	storageStrategies[StorageTypeInMem] = NewInMemoryRepository
+	storageStrategies[StorageTypeMongoDB] = NewMongoRepository
 }
 
+func RegisterPortRepositoryStrategy(constructor func(storage.Storage) PortRepository) RepositoryStrategy {
+	keys := make([]RepositoryStrategy, 0, len(storageStrategies))
+	for key, _ := range storageStrategies {
+		keys = append(keys, key)
+	}
+
+	sort.SliceStable(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	newKey := keys[len(keys)-1] + 1
+	storageStrategies[newKey] = constructor
+
+	return newKey
+}
+
+type portsRepository struct {
+	repositoryStrategy PortRepository
+}
+
+type RepositoryStrategy int
+
 const (
-	storageTypeUndefined = iota
-	storageTypeInMem
-	storageTypeMongoDB
+	storageTypeUndefined RepositoryStrategy = iota
+	StorageTypeInMem
+	StorageTypeMongoDB
 )
 
-func NewPortRepositories(storage storage.Storage) PortRepository {
-	var storageType int
-	_, isInMem := storage.(*inmemory.InMemoryStorage)
-	if isInMem {
-		storageType = storageTypeInMem
-	}
-	_, isMongo := storage.(*database.MongoDB)
-	if isMongo {
-		storageType = storageTypeMongoDB
-	}
-
-	return &portsRepository{storage, storageType}
+func NewPortRepository(key RepositoryStrategy, st storage.Storage) PortRepository {
+	storageStrategy := storageStrategies[key](st)
+	return &portsRepository{storageStrategy}
 }
 
 func (pr *portsRepository) Find(ctx context.Context, code string) (port Port, err error) {
-	err = pr.storage.Find(ctx, bson.M{"port_code": code}, &port)
+	return pr.repositoryStrategy.Find(ctx, code)
+}
+
+func (pr *portsRepository) Create(ctx context.Context, port Port) error {
+	return pr.repositoryStrategy.Create(ctx, port) //.Insert(ctx, obj)
+}
+
+func (pr *portsRepository) Update(ctx context.Context, port Port) error {
+	return pr.repositoryStrategy.Update(ctx, port)
+}
+
+func NewInMemoryRepository(st storage.Storage) PortRepository {
+	return &inMemoryRepository{st}
+}
+
+type inMemoryRepository struct {
+	st storage.Storage
+}
+
+func (imr *inMemoryRepository) Find(ctx context.Context, code string) (port Port, err error) {
+	err = imr.st.Find(ctx, bson.M{"port_code": code}, &port)
 	if err != nil {
 		log.Println("error while looking up for element, err:", err)
 		return
 	}
-
 	return
 }
 
-func (pr *portsRepository) Create(ctx context.Context, port Port) error {
-	var obj interface{}
-
-	if pr.storageType == storageTypeInMem {
-		obj = inmemory.KeyValue{
-			Key:   port.PortCode,
-			Value: port,
-		}
-	} else {
-		obj = port
-	}
-	return pr.storage.Insert(ctx, obj)
+func (pr *inMemoryRepository) Create(ctx context.Context, port Port) error {
+	return pr.st.Insert(ctx, inmemory.KeyValue{
+		Key:   port.PortCode,
+		Value: port,
+	})
+}
+func (pr *inMemoryRepository) Update(ctx context.Context, port Port) error {
+	return pr.st.Update(ctx, port.PortCode, port)
 }
 
-func (pr *portsRepository) Update(ctx context.Context, port Port) error {
-	var filter, obj interface{}
+func NewMongoRepository(st storage.Storage) PortRepository {
+	return &mongoRepository{st}
+}
 
-	if pr.storageType == storageTypeMongoDB {
-		filter = bson.M{"port_code": port.PortCode}
-		obj = bson.M{"$set": port.AsBson()}
-	} else {
-		filter = port.PortCode
-		obj = port
+type mongoRepository struct {
+	st storage.Storage
+}
+
+func (imr *mongoRepository) Find(ctx context.Context, code string) (port Port, err error) {
+	err = imr.st.Find(ctx, bson.M{"port_code": code}, &port)
+	if err != nil {
+		log.Println("error while looking up for element, err:", err)
+		return
 	}
+	return
+}
 
-	return pr.storage.Update(ctx, filter, obj)
+func (pr *mongoRepository) Create(ctx context.Context, port Port) error {
+	return pr.st.Insert(ctx, port)
+}
+
+func (pr *mongoRepository) Update(ctx context.Context, port Port) error {
+	return pr.st.Update(ctx, bson.M{"port_code": port.PortCode}, bson.M{"$set": port.AsBson()})
 }
