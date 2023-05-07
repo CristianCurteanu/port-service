@@ -24,6 +24,7 @@ func init() {
 	storageStrategies[StorageTypeMongoDB] = NewMongoRepository
 }
 
+// RegisterPortRepositoryStrategy adds a new strategy for port repository, to handle different storage mechanisms
 func RegisterPortRepositoryStrategy(constructor func(storage.Storage) PortRepository) RepositoryStrategy {
 	keys := make([]RepositoryStrategy, 0, len(storageStrategies))
 	for key, _ := range storageStrategies {
@@ -41,6 +42,7 @@ func RegisterPortRepositoryStrategy(constructor func(storage.Storage) PortReposi
 }
 
 type portsRepository struct {
+	// This is supposed to have an underlying layer of PortRepository implementation, for specific storage type
 	repositoryStrategy PortRepository
 }
 
@@ -69,12 +71,16 @@ func (pr *portsRepository) Update(ctx context.Context, port Port) error {
 	return pr.repositoryStrategy.Update(ctx, port)
 }
 
-func NewInMemoryRepository(st storage.Storage) PortRepository {
-	return &inMemoryRepository{st}
-}
-
+/*
+inMemoryRepository is a repository strategy, that is created to handle
+in memory data access layer, and to use this kind of storage type structs for insert
+*/
 type inMemoryRepository struct {
 	st storage.Storage
+}
+
+func NewInMemoryRepository(st storage.Storage) PortRepository {
+	return &inMemoryRepository{st}
 }
 
 func (imr *inMemoryRepository) Find(ctx context.Context, code string) (port Port, err error) {
@@ -96,12 +102,16 @@ func (pr *inMemoryRepository) Update(ctx context.Context, port Port) error {
 	return pr.st.Update(ctx, port.PortCode, port)
 }
 
-func NewMongoRepository(st storage.Storage) PortRepository {
-	return &mongoRepository{st}
-}
-
+/*
+mongoRepository is a repository strategy, that is created to handle
+MongoDB data access layer, and to use this kind of storage type structs for update, like bson.M{"$set": ...}
+*/
 type mongoRepository struct {
 	st storage.Storage
+}
+
+func NewMongoRepository(st storage.Storage) PortRepository {
+	return &mongoRepository{st}
 }
 
 func (imr *mongoRepository) Find(ctx context.Context, code string) (port Port, err error) {

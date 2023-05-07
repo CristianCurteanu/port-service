@@ -6,7 +6,7 @@ services:
     ports:
       - 27017:27017
     volumes:
-      - ~/url-shortener/data:/data/db
+      - ~/port-service/data:/data/db
     environment:
       - MONGO_INITDB_ROOT_USERNAME=root
       - MONGO_INITDB_ROOT_PASSWORD=S3cret
