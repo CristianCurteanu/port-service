@@ -27,7 +27,7 @@ func init() {
 // RegisterPortRepositoryStrategy adds a new strategy for port repository, to handle different storage mechanisms
 func RegisterPortRepositoryStrategy(constructor func(storage.Storage) PortRepository) RepositoryStrategy {
 	keys := make([]RepositoryStrategy, 0, len(storageStrategies))
-	for key, _ := range storageStrategies {
+	for key := range storageStrategies {
 		keys = append(keys, key)
 	}
 
@@ -76,7 +76,7 @@ inMemoryRepository is a repository strategy, that is created to handle
 in memory data access layer, and to use this kind of storage type structs for insert
 */
 type inMemoryRepository struct {
-	st storage.Storage
+	store storage.Storage
 }
 
 func NewInMemoryRepository(st storage.Storage) PortRepository {
@@ -84,7 +84,7 @@ func NewInMemoryRepository(st storage.Storage) PortRepository {
 }
 
 func (imr *inMemoryRepository) Find(ctx context.Context, code string) (port Port, err error) {
-	err = imr.st.Find(ctx, bson.M{"port_code": code}, &port)
+	err = imr.store.Find(ctx, bson.M{"port_code": code}, &port)
 	if err != nil {
 		log.Println("error while looking up for element, err:", err)
 		return
@@ -93,13 +93,13 @@ func (imr *inMemoryRepository) Find(ctx context.Context, code string) (port Port
 }
 
 func (pr *inMemoryRepository) Create(ctx context.Context, port Port) error {
-	return pr.st.Insert(ctx, inmemory.KeyValue{
+	return pr.store.Insert(ctx, inmemory.KeyValue{
 		Key:   port.PortCode,
 		Value: port,
 	})
 }
 func (pr *inMemoryRepository) Update(ctx context.Context, port Port) error {
-	return pr.st.Update(ctx, port.PortCode, port)
+	return pr.store.Update(ctx, port.PortCode, port)
 }
 
 /*
@@ -107,7 +107,7 @@ mongoRepository is a repository strategy, that is created to handle
 MongoDB data access layer, and to use this kind of storage type structs for update, like bson.M{"$set": ...}
 */
 type mongoRepository struct {
-	st storage.Storage
+	store storage.Storage
 }
 
 func NewMongoRepository(st storage.Storage) PortRepository {
@@ -115,7 +115,7 @@ func NewMongoRepository(st storage.Storage) PortRepository {
 }
 
 func (imr *mongoRepository) Find(ctx context.Context, code string) (port Port, err error) {
-	err = imr.st.Find(ctx, bson.M{"port_code": code}, &port)
+	err = imr.store.Find(ctx, bson.M{"port_code": code}, &port)
 	if err != nil {
 		log.Println("error while looking up for element, err:", err)
 		return
@@ -124,9 +124,9 @@ func (imr *mongoRepository) Find(ctx context.Context, code string) (port Port, e
 }
 
 func (pr *mongoRepository) Create(ctx context.Context, port Port) error {
-	return pr.st.Insert(ctx, port)
+	return pr.store.Insert(ctx, port)
 }
 
 func (pr *mongoRepository) Update(ctx context.Context, port Port) error {
-	return pr.st.Update(ctx, bson.M{"port_code": port.PortCode}, bson.M{"$set": port.AsBson()})
+	return pr.store.Update(ctx, bson.M{"port_code": port.PortCode}, bson.M{"$set": port.AsBson()})
 }
